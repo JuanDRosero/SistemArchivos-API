@@ -4,7 +4,7 @@ using SistemArchivos_API.Model.Interfaz;
 namespace SistemArchivos_API.Model
 {
 
-    public class SuperBloque: ISuperBloque
+    public class SuperBloque: ISuperBloque, ILectorSuperBloque
     {
         public int CantidadBloques { get; set; }
         public int CantidadInodos { get; set; }
@@ -177,6 +177,16 @@ namespace SistemArchivos_API.Model
                     Dir=actual
                 }) ;
             }
+        }
+
+        public Espacio<Bloque>[] GetBloques()
+        {
+            return TablaBloques;
+        }
+
+        public Espacio<INODO>[] GetNodos()
+        {
+            return TablaINodos;
         }
     }
 }
