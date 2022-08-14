@@ -102,6 +102,7 @@ namespace SistemArchivos_API.Model
                         if (TablaBloques[item].elemento==null)
                         {
                             TablaBloques[item].elemento = new Bloque();
+                            TablaBloques[item].elemento.Tamaño = TamañoBloques;
                         }
                         TablaBloques[item].elemento.NombreArchivo = archivo.Nombre+"."+archivo.Extencion;
                         TablaBloques[item].elemento.TamañoOcupado = tamRestante > TamañoBloques ? TamañoBloques : tamRestante;
@@ -113,6 +114,7 @@ namespace SistemArchivos_API.Model
                             Tipo="Bloque"
                         });
                         asignarPadre(padre, dirInodo);
+                        TablaINodos[dirInodo].libre = false;
 
                     }
                     return true;
@@ -162,6 +164,7 @@ namespace SistemArchivos_API.Model
                 inodo.HoraCreacion = (DateTime.Now.ToString("hh:mm:ss tt"));
                 inodo.Nombre = "Carpeta " + nombre;
                 asignarPadre(padre, dirInodo);
+                TablaINodos[dirInodo].libre = false;
                 return true;
             }
         }
@@ -187,6 +190,85 @@ namespace SistemArchivos_API.Model
         public Espacio<INODO>[] GetNodos()
         {
             return TablaINodos;
+        }
+
+        public bool EliminarArchivo(int Id) // ID del Inodo del archivo
+        {
+            if (Id < 0 || Id >= CantidadInodos)
+            {
+                    throw new NoFoundException("No se encontro el ID del inodo");
+            }
+            else
+            {
+                TablaINodos[Id].libre = true;
+                var inodo = TablaINodos[Id].elemento;
+                if (TablaINodos[inodo.Padre].Id!=-1)
+                {
+                    TablaINodos[inodo.Padre].elemento.Punteros.Remove(TablaINodos[inodo.Padre].
+                        elemento.Punteros.Find(x => x.Dir == Id));
+                }
+                foreach (var item in inodo.Punteros)
+                {
+                    TablaBloques[item.Dir].libre = true;
+                    TablaBloques[item.Dir].elemento.NombreArchivo="";
+                    TablaBloques[item.Dir].elemento.TamañoOcupado = 0;
+                }
+                inodo.Punteros.Clear();
+                return true;
+            }
+        }
+
+        public bool EliminarCarpeta(int Id)
+        {
+            if (Id < 0 || Id >= CantidadInodos)
+            {
+                if (Id == -1)
+                {
+                    throw new NoPermissionException("No tiene ermisos para borrar la raiz");
+                }
+                else
+                {
+                    throw new NoFoundException("No se encontro el ID del inodo");
+                }
+
+            }
+            else
+            {
+                TablaINodos[Id].libre = true;
+                var inodo = TablaINodos[Id].elemento;
+                if (TablaINodos[inodo.Padre].Id != -1)
+                {
+                    TablaINodos[inodo.Padre].elemento.Punteros.Remove(TablaINodos[inodo.Padre].
+                        elemento.Punteros.Find(x => x.Dir == Id));
+                }
+                foreach (var item in inodo.Punteros)
+                {
+                    if (item.Tipo== "Inodo")
+                    {
+                        TablaINodos[item.Dir].libre = true;
+                        foreach (var elemet in TablaINodos[item.Dir].elemento.Punteros)
+                        {
+                            if (elemet.Tipo=="Inodo")
+                            {
+                                EliminarCarpeta(elemet.Dir);
+                            }
+                            else if(elemet.Tipo=="Bloque")
+                            {
+                                EliminarArchivo(elemet.Dir);
+                            }
+                        }
+                    }
+                    else if(item.Tipo=="Bloque")
+                    {
+                        TablaBloques[item.Dir].libre = true;
+                        TablaBloques[item.Dir].elemento.NombreArchivo = "";
+                        TablaBloques[item.Dir].elemento.TamañoOcupado = 0;
+                    }
+
+                }
+                inodo.Punteros.Clear();
+                return true;
+            }
         }
     }
 }
